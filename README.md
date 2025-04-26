@@ -25,37 +25,37 @@
 
 # Datasets from Bloom WiSARD paper (can use any of these names as input)
 ## Binary Classifications
-Adult
-Australian
-Banana
-Diabetes
-Liver
-Mushroom
+* Adult
+* Australian
+* Banana
+* Diabetes
+* Liver
+* Mushroom
 
 ## Multiclass classification
-Ecoli
-Glass
-Iris
-Letter
-MNIST
-Satimage
-Segment
-Shuttle
-Vehicle
-Vowel
-Wine
+* Ecoli
+* Glass
+* Iris
+* Letter
+* MNIST
+* Satimage
+* Segment
+* Shuttle
+* Vehicle
+* Vowel
+* Wine
 
 
 # References
-[BLoomwisard Paper](https://moodle.cos.ufrj.br/pluginfile.php/57035/mod_resource/content/1/1-s2.0-S0925231220305105-main-2.pdf)
-[bloomwisard github](https://github.com/leandro-santiago/bloomwisard)
-* Inclui todos os conjuntos de dados também. Usei-os para adicionar os conjuntos de dados ausentes
+* [BLoomwisard Paper](https://moodle.cos.ufrj.br/pluginfile.php/57035/mod_resource/content/1/1-s2.0-S0925231220305105-main-2.pdf)
+* [bloomwisard github](https://github.com/leandro-santiago/bloomwisard)
+    - Inclui todos os conjuntos de dados também. Usei-os para adicionar os conjuntos de dados ausentes
 
-[UCI Datasets](https://archive.ics.uci.edu/datasets)
-* Subconjunto destes usado pelo Bloom WiSARD
+* [UCI Datasets](https://archive.ics.uci.edu/datasets)
+    - Subconjunto destes usado pelo Bloom WiSARD
 
-[ULEEN](https://dl.acm.org/doi/epdf/10.1145/3629522)
-[ULEEN github](https://github.com/ZSusskind/ULEEN)
+* [ULEEN](https://dl.acm.org/doi/epdf/10.1145/3629522)
+* [ULEEN github](https://github.com/ZSusskind/ULEEN)
 
-[BTHOWeN](https://moodle.cos.ufrj.br/pluginfile.php/57024/mod_resource/content/1/3559009.3569680.pdf)
-[BTHOWen github](https://github.com/ZSusskind/BTHOWeN)
+* [BTHOWeN](https://moodle.cos.ufrj.br/pluginfile.php/57024/mod_resource/content/1/3559009.3569680.pdf)
+* [BTHOWen github](https://github.com/ZSusskind/BTHOWeN)
