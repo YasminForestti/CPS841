@@ -1,0 +1,56 @@
+{
+    "configurations": [
+        {
+            "name": "BTHOWeN: train_swept_models.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/BTHOWeN/software_model/train_swept_models.py",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [
+                "adult", // Dataset name
+                "--filter_inputs",
+                "28",
+                "--filter_entries",
+                "1024",
+                "--filter_hashes",
+                "2",
+                "--bits_per_input",
+                "2",
+                "--save_prefix",
+                "test_model",
+                "--num_workers",
+                "4"
+            ]
+        },
+        {
+            "name": "BTHOWeN: evaluate.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/BTHOWeN/software_model/evaluate.py",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [
+                "models/australian/test_model_28input_1024entry_2hash_2bpi.pickle.lzma",
+                "australian" // Dataset name
+            ]
+        },
+        {
+            "name": "ULEEN: full_run.py",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/ULEEN/software_model/full_run.py",
+            "console": "integratedTerminal",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}"
+            },
+            "args": [
+                "ULEEN/software_model/example.json",
+            ]
+        }
+    ]
+}

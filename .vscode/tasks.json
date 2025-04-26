@@ -1,0 +1,18 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "process",
+			"label": "docker-build",
+			"command": "docker",
+			"args": [
+				"build",
+				"-t",
+				"trabalho1cps841:latest",
+				"-f",
+				"${workspaceFolder}/Dockerfile",
+				"${workspaceFolder}"
+			]
+		},
+	]
+}
