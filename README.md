@@ -16,7 +16,6 @@
     - O modelo ULEEN usa isso para ler seus parâmetros
 
 # Notes
-* Acho que o ULEEN roda até você CTRL+c para pará-lo.
 * O ULEEN usa conjuntos de validação, mas não parece que o Bloom WiSARD ou o BTHOWeN usem.
     - Se o Bloom WiSARD não usa, então acho que não precisamos usar.
 * Usei o mesmo código do BTHOWeN para carregar todos os conjuntos de dados UCI (basicamente tudo, exceto MNIST).
