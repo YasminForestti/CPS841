@@ -20,6 +20,7 @@
     - Se o Bloom WiSARD não usa, então acho que não precisamos usar.
 * Usei o mesmo código do BTHOWeN para carregar todos os conjuntos de dados UCI (basicamente tudo, exceto MNIST).
 * Segui a mesma codificação de dados categóricos do Bloom WiSARD (ou seja, os rótulos a,b,c se tornam 0,1,2).
+* Se você estiver usando Windows, poderá ter problemas para compilar devido às bibliotecas CUDA da Nvidia. Nesse caso, você pode excluí-las do arquivo requirements.txt principal e compilar sem elas. O código deve funcionar bem sem essas bibliotecas.
 
 
 # Datasets from Bloom WiSARD paper (can use any of these names as input)
