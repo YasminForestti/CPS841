@@ -45,6 +45,27 @@
 * Vowel
 * Wine
 
+# BloomWiSARD Resultados
+
+| Dataset    | Accuracy | Accuracy (Std) |
+|------------|----------|----------------|
+| Adult      | 0.718    | 0.0061495748   |
+| Australian | 0.834    | 0.0223775813   |
+| Banana     | 0.864    | 0.0057860498   |
+| Diabetes   | 0.69    | 0.0262359291   |
+| Liver      | 0.591    | 0.0483371899   |
+| Mushroom   | 1.0    | 0.0000000000   |
+| Ecoli      | 0.799    | 0.0202621531   |
+| Glass      | 0.726    | 0.0367137219   |
+| Iris       | 0.976    | 0.0215406592   |
+| Letter     | 0.848    | 0.0045028728   |
+| MNIST      | 0.915    | 0.0056781577   |
+| Satimage   | 0.851    | 0.0057708318   |
+| Segment    | 0.933    | 0.0080506388   |
+| Shuttle    | 0.868    | 0.0122790440   |
+| Vehicle    | 0.662    | 0.0238480121   |
+| Vowel      | 0.876    | 0.0262235043   |
+| Wine       | 0.926    | 0.0260741464   |
 
 # References
 * [BLoomwisard Paper](https://moodle.cos.ufrj.br/pluginfile.php/57035/mod_resource/content/1/1-s2.0-S0925231220305105-main-2.pdf)
