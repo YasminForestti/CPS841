@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import sys
 import itertools
 import argparse
 import ctypes as c
@@ -16,7 +15,6 @@ import random
 # For saving models
 import pickle
 import lzma
-import os
 
 from wisard import WiSARD
 
@@ -292,7 +290,7 @@ def main():
     args = read_arguments()
 
     save_prefix="model",
-    num_workers= cpu_count()
+    num_workers= cpu_count() - 3
 
     for bpi in args.bits_per_input:
         train_dataset, test_dataset = get_datasets(args.dset_name)
@@ -303,7 +301,7 @@ def main():
             
             print(f"Generation {generation + 1}/{GENERATIONS}")
 
-            with ProcessPoolExecutor(max_workers=cpu_count()) as executor:
+            with ProcessPoolExecutor(max_workers=num_workers) as executor:
                 list_population_conf = list(executor.map(
                     evaluate_wrapper,
                     [(chrom, datasets, bpi, num_workers, save_prefix) for chrom in population]
@@ -324,7 +322,7 @@ def main():
             population = survivors + children
 
     if GENERATIONS > 1:
-        with ProcessPoolExecutor(max_workers=cpu_count()) as executor:
+        with ProcessPoolExecutor(max_workers=num_workers) as executor:
             list_final_population = list(executor.map(
                 evaluate_wrapper,
                 [(chrom, datasets, bpi, num_workers, save_prefix) for chrom in population]
