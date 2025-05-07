@@ -23,8 +23,8 @@ from wisard import WiSARD
 # For the tabular datasets (all except MNIST)
 import tabular_tools
 
-POPULATION_SIZE = 5
-GENERATIONS = 1
+POPULATION_SIZE = 20
+GENERATIONS = 15
 MUTATION_RATE = 0.25
 
 
@@ -43,23 +43,23 @@ def run_inference(inputs, labels, model, bleach=1):
             correct += 1
     correct_percent = round((100 * correct) / num_samples, 4)
     tie_percent = round((100 * ties) / num_samples, 4)
-    print(f"With bleaching={bleach}, accuracy={correct}/{num_samples} ({correct_percent}%); ties={ties}/{num_samples} ({tie_percent}%)")
+    # print(f"With bleaching={bleach}, accuracy={correct}/{num_samples} ({correct_percent}%); ties={ties}/{num_samples} ({tie_percent}%)")
     return correct
 
 def parameterized_run(train_inputs, train_labels, val_inputs, val_labels, test_inputs, test_labels, unit_inputs, unit_entries, unit_hashes):
     model = WiSARD(train_inputs[0].size, train_labels.max()+1, unit_inputs, unit_entries, unit_hashes)
 
-    print("Training model")
+    # print("Training model")
     for d in range(len(train_inputs)):
         model.train(train_inputs[d], train_labels[d])
-        if ((d+1) % 10000) == 0:
-            print(d+1)
+        # if ((d+1) % 10000) == 0:
+        #     print(d+1)
 
     max_val = 0
     for d in model.discriminators:
         for f in d.filters:
             max_val = max(max_val, f.data.max())
-    print(f"Maximum possible bleach value is {max_val}")
+    # print(f"Maximum possible bleach value is {max_val}")
     # Use a binary search-based strategy to find the value of b that maximizes accuracy on the validation set
     best_bleach = max_val // 2
     step = max(max_val // 4, 1)
@@ -82,9 +82,9 @@ def parameterized_run(train_inputs, train_labels, val_inputs, val_labels, test_i
         best_bleach = new_best_bleach
         if step > 1:
             step //= 2
-    print(f"Best bleach: {best_bleach}; inputs/entries/hashes = {unit_inputs},{unit_entries},{unit_hashes}")
+    # print(f"Best bleach: {best_bleach}; inputs/entries/hashes = {unit_inputs},{unit_entries},{unit_hashes}")
     # Evaluate on test set
-    print("Testing model")
+    # print("Testing model")
     accuracy = run_inference(test_inputs, test_labels, model, bleach=best_bleach)
     return model, accuracy
 
@@ -202,17 +202,17 @@ def create_models(datasets, unit_inputs, unit_entries, unit_hashes, bits_per_inp
     
     if num_workers == -1:
         num_workers = cpu_count()
-    print(f"Launching jobs for {len(configurations)} configurations across {num_workers} workers")
+    # print(f"Launching jobs for {len(configurations)} configurations across {num_workers} workers")
     with Pool(num_workers) as p:
         results = p.starmap(parameterized_run, configurations)
-    for entries in unit_entries:
-        print(
-            f"Best with {entries} entries: {max([results[i][1] for i in range(len(results)) if configurations[i][7] == entries])}")
+    # for entries in unit_entries:
+    #     print(
+    #         f"Best with {entries} entries: {max([results[i][1] for i in range(len(results)) if configurations[i][7] == entries])}")
     configs_plus_results = [[configurations[i][6:9]] +
                             list(results[i]) for i in range(len(results))]
     configs_plus_results.sort(reverse=True, key=lambda x: x[2])
-    for i in configs_plus_results:
-        print(f"{i[0]}: {i[2]} ({i[2] / len(datasets[4])})")
+    # for i in configs_plus_results:
+        # print(f"{i[0]}: {i[2]} ({i[2] / len(datasets[4])})")
 
     return configs_plus_results[0]
     # Ensure folder for dataset exists
@@ -243,21 +243,12 @@ def save_model(model, num_inputs, fname):
     with lzma.open(fname, "wb") as f:
         pickle.dump(state_dict, f)
 
-# def read_arguments():
-#     parser = argparse.ArgumentParser(description="Train BTHOWeN models for a dataset with specified hyperparameter sweep")
-#     parser.add_argument("dset_name", help="Name of dataset to use")
-#     parser.add_argument("--filter_inputs", nargs="+", required=True, type=int,\
-#             help="Number of inputs to each Bloom filter (accepts multiple values)")
-#     parser.add_argument("--filter_entries", nargs="+", required=True, type=int,\
-#             help="Number of entries in each Bloom filter (accepts multiple values; must be powers of 2)")
-#     parser.add_argument("--filter_hashes", nargs="+", required=True, type=int,\
-#             help="Number of distinct hash functions for each Bloom filter (accepts multiple values)")
-#     parser.add_argument("--bits_per_input", nargs="+", required=True, type=int,\
-#             help="Number of thermometer encoding bits for each input in the dataset (accepts multiple values)")
-#     parser.add_argument("--save_prefix", default="model", help="Partial path/fname to prepend to each output file")
-#     parser.add_argument("--num_workers", default=-1, type=int, help="Number of processes to run in parallel; defaults to number of logical CPUs")
-#     args = parser.parse_args()
-#     return args
+def read_arguments():
+    parser = argparse.ArgumentParser(description="Train BTHOWeN models for a dataset with specified hyperparameter sweep")
+    parser.add_argument("dset_name", help="Name of dataset to use")
+    parser.add_argument("--bits_per_input", nargs="+", required=True, type=int,  help="Number of thermometer encoding bits for each input in the dataset")
+    args = parser.parse_args()
+    return args
 
 def random_chromosome():
     return {
@@ -298,62 +289,66 @@ def evaluate_wrapper(args):
     return evaluate_chromosome(*args)
 
 def main():
+    args = read_arguments()
 
-    args = argparse.Namespace(
-        dset_name='MNIST',
-        # filter_inputs=[24, 32],
-        # filter_entries=[16, 32],
-        # filter_hashes=[2, 3],
-        bits_per_input=[2],
-        save_prefix="model",
-        num_workers= cpu_count()
-    )
+    save_prefix="model",
+    num_workers= cpu_count()
 
     for bpi in args.bits_per_input:
         train_dataset, test_dataset = get_datasets(args.dset_name)
         datasets = binarize_datasets(train_dataset, test_dataset, bpi)
-    
-        # print(f"Do runs with {bpi} bit(s) per input")
 
         population = [random_chromosome() for _ in range(POPULATION_SIZE)]
-
-
-        with ProcessPoolExecutor(max_workers=cpu_count()) as executor:
-            list_population_conf = list(executor.map(
-                    evaluate_wrapper,
-                    [(chrom, datasets, bpi, args.num_workers, args.save_prefix) for chrom in population]
-                ))
-                    
-        list_population_conf.sort(key=lambda x: x[1][2], reverse=True)
-        
-        survivors = [chrom for chrom, _ in list_population_conf[:POPULATION_SIZE // 2]]
-
-        # print(f"Survivors: {survivors}")
-
-        children = []
-        while len(children) < POPULATION_SIZE - len(survivors):
-            p1, p2 = random.sample(survivors, 2) # gerar dois pais aleatórios dentro da lista de sobreviventes
-            child = mutate(crossover(p1, p2))
-            children.append(child)
-
-        population = survivors + children
+        for generation in range(GENERATIONS):
             
+            print(f"Generation {generation + 1}/{GENERATIONS}")
 
-    with ProcessPoolExecutor(max_workers=cpu_count()) as executor:
-        list_final_population = list(executor.map(
-            evaluate_wrapper,
-            [(chrom, datasets, bpi, args.num_workers, args.save_prefix) for chrom in population]
-        ))
+            with ProcessPoolExecutor(max_workers=cpu_count()) as executor:
+                list_population_conf = list(executor.map(
+                    evaluate_wrapper,
+                    [(chrom, datasets, bpi, num_workers, save_prefix) for chrom in population]
+                    ))
+                
+            list_population_conf.sort(key=lambda x: x[1][2], reverse=True)
+
+            print(f"Best Chromosome of Generation {generation + 1}: {list_population_conf[0][1][2] / 100}")
+            
+            survivors = [chrom for chrom, _ in list_population_conf[:POPULATION_SIZE // 2]]
+
+            children = []
+            while len(children) < POPULATION_SIZE - len(survivors):
+                p1, p2 = random.sample(survivors, 2)  # Generate two random parents from the survivors
+                child = mutate(crossover(p1, p2))
+                children.append(child)
+
+            population = survivors + children
+
+    if GENERATIONS > 1:
+        with ProcessPoolExecutor(max_workers=cpu_count()) as executor:
+            list_final_population = list(executor.map(
+                evaluate_wrapper,
+                [(chrom, datasets, bpi, num_workers, save_prefix) for chrom in population]
+            ))
+    else: 
+        list_final_population = list_population_conf
 
     list_final_population.sort(key = lambda x: x[1][2],reverse = True)
     best_score = list_final_population[0][1][2]/100
     best_model = list_final_population[0][1][1]
     best_model_inputs = list_final_population[0][1][0][0]
+    best_model_entries = list_final_population[0][1][0][1]
+    best_model_hashes = list_final_population[0][1][0][2]
+    bpi = args.bits_per_input[0]
 
-    with open("best_model.txt", "a") as f:
-        f.write(f"{'Score':<10}{'Dataset':<15}{'Model Inputs':<15}\n")
-        f.write(f"{'-'*40}\n")
-        f.write(f"{best_score:<10}{args.dset_name:<15}{best_model_inputs:<15}\n")
+    # registrar melhor input 
+    header = f"{'Score':<10}{'Dataset':<15}{'filter Inputs':<15}{'filter Entries':<15}{'filter Hashes':<15}{'bpi':<6}{'POPULATION_SIZE':<20}{'GENERATIONS':<15}{'MUTATION_RATE':<15}\n"
+    with open("best_model.txt", "a+") as f:
+        f.seek(0)
+        content = f.read()
+        if header not in content:
+            f.write(f"\n{header}")
+            f.write(f"{'-'*130}\n")
+        f.write(f"{best_score:<10}{args.dset_name:<15}{best_model_inputs:<15}{best_model_entries:<15}{best_model_hashes:<15}{bpi:<6}{POPULATION_SIZE:<20}{GENERATIONS:<15}{MUTATION_RATE:<15}\n")
 
 if __name__ == "__main__":
     multiprocessing.set_start_method('spawn')
