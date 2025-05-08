@@ -290,13 +290,18 @@ def main():
     args = read_arguments()
 
     save_prefix="model",
-    num_workers= cpu_count() - 3
+    num_workers= cpu_count() - 2
 
     for bpi in args.bits_per_input:
         train_dataset, test_dataset = get_datasets(args.dset_name)
         datasets = binarize_datasets(train_dataset, test_dataset, bpi)
 
         population = [random_chromosome() for _ in range(POPULATION_SIZE)]
+        best_conf_model = None
+        stagnant_generations = 0  # Counter for generations with no improvement
+
+        print(f"Initial Population: {population}")
+
         for generation in range(GENERATIONS):
             
             print(f"Generation {generation + 1}/{GENERATIONS}")
@@ -306,11 +311,23 @@ def main():
                     evaluate_wrapper,
                     [(chrom, datasets, bpi, num_workers, save_prefix) for chrom in population]
                     ))
-                
+            
             list_population_conf.sort(key=lambda x: x[1][2], reverse=True)
 
             print(f"Best Chromosome of Generation {generation + 1}: {list_population_conf[0][1][2] / 100}")
             
+            current_best_conf_model = list_population_conf[0][1][0]
+
+            if current_best_conf_model == best_conf_model:
+                stagnant_generations += 1
+            else:
+                stagnant_generations = 0
+                best_conf_model = current_best_conf_model
+
+            if stagnant_generations > 5:
+                print("Stopping early due to no improvement in the last 3 generations.")
+                break
+
             survivors = [chrom for chrom, _ in list_population_conf[:POPULATION_SIZE // 2]]
 
             children = []
