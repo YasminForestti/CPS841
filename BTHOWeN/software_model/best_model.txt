@@ -3,3 +3,4 @@
 Score     Dataset        filter Inputs  filter Entries filter Hashes  bpi   POPULATION_SIZE     GENERATIONS    MUTATION_RATE  
 ----------------------------------------------------------------------------------------------------------------------------------
 93.01     MNIST          24             1024           5              2     10                  2              0.25           
+93.58     MNIST          24             1024           5              2     20                  15             0.25           
