@@ -39,10 +39,9 @@ def run_inference(inputs, labels, model, bleach=1):
             ties += 1
         if prediction[0] == label:
             correct += 1
-    correct_percent = round((100 * correct) / num_samples, 4)
-    tie_percent = round((100 * ties) / num_samples, 4)
-    # print(f"With bleaching={bleach}, accuracy={correct}/{num_samples} ({correct_percent}%); ties={ties}/{num_samples} ({tie_percent}%)")
-    return correct
+    accuracy = (correct / num_samples) * 100
+    tie_percent = (ties / num_samples) * 100
+    return accuracy
 
 def parameterized_run(train_inputs, train_labels, val_inputs, val_labels, test_inputs, test_labels, unit_inputs, unit_entries, unit_hashes):
     model = WiSARD(train_inputs[0].size, train_labels.max()+1, unit_inputs, unit_entries, unit_hashes)
