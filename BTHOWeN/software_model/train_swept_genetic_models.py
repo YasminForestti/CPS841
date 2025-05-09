@@ -250,9 +250,9 @@ def read_arguments():
 
 def random_chromosome():
     return {
-        'filter_inputs': random.choice([24, 32, 48, 64, 96]),
-        'filter_entries': 2 ** random.randint(2, 10),
-        'filter_hashes': random.randint(1, 5)
+        'filter_inputs': random.randint(8, 128),
+        'filter_entries': 2 ** random.randint(2, 12),
+        'filter_hashes': random.randint(1,8)
     }
 
 def crossover(p1, p2):
@@ -262,11 +262,11 @@ def crossover(p1, p2):
 
 def mutate(chrom):
     if random.random() < MUTATION_RATE:
-        chrom['filter_inputs'] = random.choice([24, 32, 48, 64, 96])
+        chrom['filter_inputs'] = random.randint(8, 128)
     if random.random() < MUTATION_RATE:
-        chrom['filter_entries'] = 2 ** random.randint(2, 10)
+        chrom['filter_entries'] = 2 ** random.randint(2, 12)
     if random.random() < MUTATION_RATE:
-        chrom['filter_hashes'] = random.randint(1, 5)
+        chrom['filter_hashes'] = random.randint(1, 8)
     return chrom
 
 def evaluate_chromosome(chrom, datasets, bpi, num_workers, save_prefix):
@@ -290,7 +290,7 @@ def main():
     args = read_arguments()
 
     save_prefix="model",
-    num_workers= cpu_count() - 2
+    num_workers= cpu_count() - 3
 
     for bpi in args.bits_per_input:
         train_dataset, test_dataset = get_datasets(args.dset_name)
@@ -314,7 +314,7 @@ def main():
             
             list_population_conf.sort(key=lambda x: x[1][2], reverse=True)
 
-            print(f"Best Chromosome of Generation {generation + 1}: {list_population_conf[0][1][2] / 100}")
+            print(f"Best Chromosome of Generation {generation + 1}: {list_population_conf[0][1][2] }")
             
             current_best_conf_model = list_population_conf[0][1][0]
 
@@ -324,7 +324,7 @@ def main():
                 stagnant_generations = 0
                 best_conf_model = current_best_conf_model
 
-            if stagnant_generations > 5:
+            if stagnant_generations > 3:
                 print("Stopping early due to no improvement in the last 3 generations.")
                 break
 
@@ -348,7 +348,7 @@ def main():
         list_final_population = list_population_conf
 
     list_final_population.sort(key = lambda x: x[1][2],reverse = True)
-    best_score = list_final_population[0][1][2]/100
+    best_score = list_final_population[0][1][2]
     best_model = list_final_population[0][1][1]
     best_model_inputs = list_final_population[0][1][0][0]
     best_model_entries = list_final_population[0][1][0][1]
