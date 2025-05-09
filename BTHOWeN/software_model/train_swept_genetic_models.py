@@ -241,11 +241,21 @@ def save_model(model, num_inputs, fname):
         pickle.dump(state_dict, f)
 
 def read_arguments():
-    parser = argparse.ArgumentParser(description="Train BTHOWeN models for a dataset with specified hyperparameter sweep")
+    parser = argparse.ArgumentParser(description="Train BTHOWeN models using genetic algorithm")
     parser.add_argument("dset_name", help="Name of dataset to use")
-    parser.add_argument("--bits_per_input", nargs="+", required=True, type=int,  help="Number of thermometer encoding bits for each input in the dataset")
-    args = parser.parse_args()
-    return args
+    parser.add_argument("--bits_per_input", nargs="+", required=True, type=int, 
+                       help="Number of thermometer encoding bits for each input")
+    parser.add_argument("--population_size", type=int, default=20,
+                       help="Size of the population")
+    parser.add_argument("--generations", type=int, default=15,
+                       help="Number of generations")
+    parser.add_argument("--mutation_rate", type=float, default=0.25,
+                       help="Mutation rate")
+    parser.add_argument("--num_workers", type=int, default=-1,
+                       help="Number of worker processes (-1 for auto)")
+    parser.add_argument("--save_prefix", type=str, default="model",
+                       help="Prefix for saving models")
+    return parser.parse_args()
 
 def random_chromosome():
     return {
@@ -260,13 +270,20 @@ def crossover(p1, p2):
     }
 
 def mutate(chrom):
+    new_chrom = chrom.copy()
     if random.random() < MUTATION_RATE:
-        chrom['filter_inputs'] = random.randint(8, 128)
+        # Make smaller changes to existing values
+        new_chrom['filter_inputs'] = max(8, min(128, 
+            chrom['filter_inputs'] + random.randint(-10, 10)))
     if random.random() < MUTATION_RATE:
-        chrom['filter_entries'] = 2 ** random.randint(2, 12)
+        # Keep power of 2 constraint
+        current_power = int(np.log2(chrom['filter_entries']))
+        new_power = max(2, min(12, current_power + random.randint(-1, 1)))
+        new_chrom['filter_entries'] = 2 ** new_power
     if random.random() < MUTATION_RATE:
-        chrom['filter_hashes'] = random.randint(1, 8)
-    return chrom
+        new_chrom['filter_hashes'] = max(1, min(8, 
+            chrom['filter_hashes'] + random.randint(-1, 1)))
+    return new_chrom
 
 def evaluate_chromosome(chrom, datasets, bpi, num_workers, save_prefix):
     return (
@@ -287,84 +304,107 @@ def evaluate_wrapper(args):
 
 def main():
     args = read_arguments()
+    
+    # Set global parameters from args
+    global POPULATION_SIZE, GENERATIONS, MUTATION_RATE
+    POPULATION_SIZE = args.population_size
+    GENERATIONS = args.generations
+    MUTATION_RATE = args.mutation_rate
+    
+    save_prefix = args.save_prefix
+    num_workers = args.num_workers if args.num_workers != -1 else cpu_count() - 1
 
-    save_prefix="model",
-    num_workers= cpu_count() - 3
+    try:
+        for bpi in args.bits_per_input:
+            print(f"\nTraining with {bpi} bits per input")
+            train_dataset, test_dataset = get_datasets(args.dset_name)
+            datasets = binarize_datasets(train_dataset, test_dataset, bpi)
 
-    for bpi in args.bits_per_input:
-        train_dataset, test_dataset = get_datasets(args.dset_name)
-        datasets = binarize_datasets(train_dataset, test_dataset, bpi)
+            population = [random_chromosome() for _ in range(POPULATION_SIZE)]
+            best_conf_model = None
+            best_accuracy = 0
+            stagnant_generations = 0
 
-        population = [random_chromosome() for _ in range(POPULATION_SIZE)]
-        best_conf_model = None
-        stagnant_generations = 0  # Counter for generations with no improvement
+            print(f"Initial Population: {population}")
 
-        print(f"Initial Population: {population}")
+            for generation in range(GENERATIONS):
+                print(f"\nGeneration {generation + 1}/{GENERATIONS}")
 
-        for generation in range(GENERATIONS):
-            
-            print(f"Generation {generation + 1}/{GENERATIONS}")
+                try:
+                    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+                        list_population_conf = list(executor.map(
+                            evaluate_wrapper,
+                            [(chrom, datasets, bpi, num_workers, save_prefix) for chrom in population]
+                        ))
+                except Exception as e:
+                    print(f"Error during parallel evaluation: {e}")
+                    continue
 
-            with ProcessPoolExecutor(max_workers=num_workers) as executor:
-                list_population_conf = list(executor.map(
-                    evaluate_wrapper,
-                    [(chrom, datasets, bpi, num_workers, save_prefix) for chrom in population]
+                list_population_conf.sort(key=lambda x: x[1][2], reverse=True)
+                current_best_accuracy = list_population_conf[0][1][2]
+
+                print(f"Best Chromosome of Generation {generation + 1}: {list_population_conf[0][0]} with accuracy: {current_best_accuracy:.2f}%")
+
+                if current_best_accuracy <= best_accuracy:
+                    stagnant_generations += 1
+                else:
+                    stagnant_generations = 0
+                    best_accuracy = current_best_accuracy
+                    best_conf_model = list_population_conf[0][1][0]
+
+                if stagnant_generations > 3:
+                    print("Stopping early due to no improvement in the last 3 generations.")
+                    break
+
+                # Tournament selection for survivors
+                survivors = []
+                while len(survivors) < POPULATION_SIZE // 2:
+                    # Select 3 random individuals and pick the best
+                    tournament = random.sample(list_population_conf, 3)
+                    winner = max(tournament, key=lambda x: x[1][2])
+                    survivors.append(winner[0])
+
+                # Create children through crossover and mutation
+                children = []
+                while len(children) < POPULATION_SIZE - len(survivors):
+                    p1, p2 = random.sample(survivors, 2)
+                    child = mutate(crossover(p1, p2))
+                    children.append(child)
+
+                population = survivors + children
+
+        # Final evaluation
+        try:
+            if GENERATIONS > 1:
+                with ProcessPoolExecutor(max_workers=num_workers) as executor:
+                    list_final_population = list(executor.map(
+                        evaluate_wrapper,
+                        [(chrom, datasets, bpi, num_workers, save_prefix) for chrom in population]
                     ))
-            
-            list_population_conf.sort(key=lambda x: x[1][2], reverse=True)
-
-            print(f"Best Chromosome of Generation {generation + 1}: {list_population_conf[0][1][2] }")
-            
-            current_best_conf_model = list_population_conf[0][1][0]
-
-            if current_best_conf_model == best_conf_model:
-                stagnant_generations += 1
             else:
-                stagnant_generations = 0
-                best_conf_model = current_best_conf_model
+                list_final_population = list_population_conf
 
-            if stagnant_generations > 3:
-                print("Stopping early due to no improvement in the last 3 generations.")
-                break
+            list_final_population.sort(key=lambda x: x[1][2], reverse=True)
+            best_score = list_final_population[0][1][2]
+            best_model = list_final_population[0][1][1]
+            best_chromosome = list_final_population[0][0]
 
-            survivors = [chrom for chrom, _ in list_population_conf[:POPULATION_SIZE // 2]]
+            # Save results
+            header = f"{'Score':<10}{'Dataset':<15}{'filter Inputs':<15}{'filter Entries':<15}{'filter Hashes':<15}{'bpi':<6}{'POPULATION_SIZE':<20}{'GENERATIONS':<15}{'MUTATION_RATE':<15}\n"
+            with open("best_model.txt", "a+") as f:
+                f.seek(0)
+                content = f.read()
+                if header not in content:
+                    f.write(f"\n{header}")
+                    f.write(f"{'-'*130}\n")
+                f.write(f"{best_score:.2f}%{args.dset_name:<15}{best_chromosome['filter_inputs']:<15}{best_chromosome['filter_entries']:<15}{best_chromosome['filter_hashes']:<15}{bpi:<6}{POPULATION_SIZE:<20}{GENERATIONS:<15}{MUTATION_RATE:<15}\n")
 
-            children = []
-            while len(children) < POPULATION_SIZE - len(survivors):
-                p1, p2 = random.sample(survivors, 2)  # Generate two random parents from the survivors
-                child = mutate(crossover(p1, p2))
-                children.append(child)
+        except Exception as e:
+            print(f"Error during final evaluation: {e}")
 
-            population = survivors + children
-
-    if GENERATIONS > 1:
-        with ProcessPoolExecutor(max_workers=num_workers) as executor:
-            list_final_population = list(executor.map(
-                evaluate_wrapper,
-                [(chrom, datasets, bpi, num_workers, save_prefix) for chrom in population]
-            ))
-    else: 
-        list_final_population = list_population_conf
-
-    list_final_population.sort(key = lambda x: x[1][2],reverse = True)
-    best_score = list_final_population[0][1][2]
-    best_model = list_final_population[0][1][1]
-    best_model_inputs = list_final_population[0][1][0][0]
-    best_model_entries = list_final_population[0][1][0][1]
-    best_model_hashes = list_final_population[0][1][0][2]
-    bpi = args.bits_per_input[0]
-
-    # registrar melhor input 
-    header = f"{'Score':<10}{'Dataset':<15}{'filter Inputs':<15}{'filter Entries':<15}{'filter Hashes':<15}{'bpi':<6}{'POPULATION_SIZE':<20}{'GENERATIONS':<15}{'MUTATION_RATE':<15}\n"
-    with open("best_model.txt", "a+") as f:
-        f.seek(0)
-        content = f.read()
-        if header not in content:
-            f.write(f"\n{header}")
-            f.write(f"{'-'*130}\n")
-        f.write(f"{best_score:<10}{args.dset_name:<15}{best_model_inputs:<15}{best_model_entries:<15}{best_model_hashes:<15}{bpi:<6}{POPULATION_SIZE:<20}{GENERATIONS:<15}{MUTATION_RATE:<15}\n")
+    except Exception as e:
+        print(f"Error during training: {e}")
 
 if __name__ == "__main__":
     multiprocessing.set_start_method('spawn')
     main()
-
