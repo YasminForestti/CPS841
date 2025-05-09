@@ -1,3 +1,7 @@
 {
-    "python.envFile": "${workspaceFolder}/.env"
+    "python.envFile": "${workspaceFolder}/.env",
+    "vim.handleKeys": {
+        "<C->":false
+    },
+    "vim.useCtrlKeys": false
 }
